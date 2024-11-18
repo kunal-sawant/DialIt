@@ -1,5 +1,5 @@
 const int NUM_SLIDERS = 2;
-const int silder1 = A0, silder2 = A1;
+const int silder1 = A0, silder2 = A3;
 int global1 = 0, global2 = 0;
 int sliderVal1 = 0, sliderVal2 = 0;
 

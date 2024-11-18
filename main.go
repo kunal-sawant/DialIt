@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"lib/terminalview"
 	"strconv"
 	"strings"
 	"time"
@@ -12,9 +13,11 @@ import (
 )
 
 func main() {
+	config := terminalview.GetSerialConfig()
+
 	options := serial.OpenOptions{
-		PortName:        "COM3",
-		BaudRate:        9600,
+		PortName:        config.ComPort,
+		BaudRate:        config.BaudRate,
 		DataBits:        8,
 		StopBits:        1,
 		MinimumReadSize: 4,
@@ -32,14 +35,15 @@ func main() {
 		fmt.Println(err)
 	}
 	brightnessGlobal := 0
-	volumeGloabal, err := volume.GetVolume()
+	volumeGloabal, _ := volume.GetVolume()
 
 	buf := make([]byte, 10)
 	for {
 		time.Sleep(10 * time.Millisecond)
 		n, err := port.Read(buf)
 		if err != nil {
-			fmt.Printf("port.Read: %v\n", err)
+			// fmt.Printf("port.Read: %v\n", err)
+			panic(err)
 		}
 		serialData := string(buf[:n])
 		data := strings.Split(serialData, "\r\n")[0]
@@ -50,7 +54,7 @@ func main() {
 			brightnessVal := vals[0]
 			volumeVal := vals[1]
 
-			if brightnessGlobal != brightnessVal && absDiffInt(brightnessGlobal, brightnessVal) > 1 {
+			if brightnessGlobal != brightnessVal && absDiffInt(brightnessGlobal, brightnessVal) > 5 {
 				for _, compositeMonitor := range compositeMonitors {
 					// Set the brightness of the current display to current value
 					err = displayController.SetVCPFeature(compositeMonitor.PhysicalInfo.Handle, displayController.Brightness, brightnessVal)
@@ -63,21 +67,21 @@ func main() {
 				}
 			}
 
-			if volumeGloabal != volumeVal && absDiffInt(volumeGloabal, volumeVal) > 1 {
+			if volumeGloabal != volumeVal && absDiffInt(volumeGloabal, volumeVal) > 5 {
 				err = volume.SetVolume(volumeVal)
 				fmt.Printf("Setting volume to: %d\n", volumeVal)
 				if err != nil {
-					fmt.Printf("set volume failed: %+v", err)
+					fmt.Printf("set volume failed: %+v\n", err)
 					continue
 				} else {
 					volumeGloabal = volumeVal
 				}
 			}
 		}
-		// fmt.Printf("serialVal: %s\n", buf[:n])
 
 	}
 }
+
 func getValues(serialVal string) []int {
 	valuesArr := strings.Split(serialVal, ",")
 	var intSlice []int = make([]int, 2)
