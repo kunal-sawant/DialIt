@@ -2,18 +2,26 @@ package main
 
 import (
 	"fmt"
-	"lib/terminalview"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gek64/displayController"
 	"github.com/itchyny/volume-go"
 	"github.com/jacobsa/go-serial/serial"
+	"github.com/kunal-sawant/DialIt/systemcontrols"
+	"github.com/kunal-sawant/DialIt/ui"
 )
 
 func main() {
-	config := terminalview.GetSerialConfig()
+
+	config := ui.GetSerialConfig()
+
+	controller, err := systemcontrols.New()
+
+	if err != nil {
+		panic(err)
+	}
 
 	options := serial.OpenOptions{
 		PortName:        config.ComPort,
@@ -30,10 +38,6 @@ func main() {
 	}
 	defer port.Close()
 
-	compositeMonitors, err := displayController.GetCompositeMonitors()
-	if err != nil {
-		fmt.Println(err)
-	}
 	brightnessGlobal := 0
 	volumeGloabal, _ := volume.GetVolume()
 
@@ -54,26 +58,22 @@ func main() {
 			brightnessVal := vals[0]
 			volumeVal := vals[1]
 
-			if brightnessGlobal != brightnessVal && absDiffInt(brightnessGlobal, brightnessVal) > 5 {
-				for _, compositeMonitor := range compositeMonitors {
-					// Set the brightness of the current display to current value
-					err = displayController.SetVCPFeature(compositeMonitor.PhysicalInfo.Handle, displayController.Brightness, brightnessVal)
-					fmt.Printf("Setting brightness to: %d\n", brightnessVal)
-					if err != nil {
-						fmt.Println(err)
-					} else {
-						brightnessGlobal = brightnessVal
-					}
+			if brightnessGlobal != brightnessVal {
+				err := controller.SetBrightness(brightnessVal)
+				if err != nil {
+					log.Printf("Set brightness failed: %v\n", err)
+				} else {
+					log.Printf("Setting brightness to: %d\n", brightnessVal)
+					brightnessGlobal = brightnessVal
 				}
 			}
 
-			if volumeGloabal != volumeVal && absDiffInt(volumeGloabal, volumeVal) > 5 {
-				err = volume.SetVolume(volumeVal)
-				fmt.Printf("Setting volume to: %d\n", volumeVal)
+			if volumeGloabal != volumeVal {
+				err = controller.SetVolume(volumeVal)
 				if err != nil {
-					fmt.Printf("set volume failed: %+v\n", err)
-					continue
+					log.Printf("Set volume failed: %v\n", err)
 				} else {
+					log.Printf("Setting volume to: %d\n", volumeVal)
 					volumeGloabal = volumeVal
 				}
 			}

@@ -1,4 +1,4 @@
-module lib
+module github.com/kunal-sawant/DialIt
 
 go 1.22.2
 
